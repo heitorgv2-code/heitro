@@ -20,6 +20,10 @@ def conectar():
         observacao TEXT,
         UNIQUE (codigo, tamanho_br)
     )""")
+    cols = [r[1] for r in con.execute("PRAGMA table_info(calcados)")]
+    for c in ("preco", "preco_promo"):
+        if c not in cols:
+            con.execute(f"ALTER TABLE calcados ADD COLUMN {c} REAL")
     return con
 
 def main():
@@ -28,13 +32,16 @@ def main():
     if cmd == "add":
         codigo, modelo, marca, cor, tam, qtd = sys.argv[2:8]
         obs = sys.argv[8] if len(sys.argv) > 8 else None
-        con.execute("""INSERT INTO calcados (codigo, modelo, marca, cor, tamanho_br, quantidade, observacao)
-            VALUES (?,?,?,?,?,?,?)
+        preco = float(sys.argv[9]) if len(sys.argv) > 9 else None
+        promo = float(sys.argv[10]) if len(sys.argv) > 10 else None
+        con.execute("""INSERT INTO calcados (codigo, modelo, marca, cor, tamanho_br, quantidade, observacao, preco, preco_promo)
+            VALUES (?,?,?,?,?,?,?,?,?)
             ON CONFLICT(codigo, tamanho_br) DO UPDATE SET quantidade=excluded.quantidade,
-              modelo=excluded.modelo, marca=excluded.marca, cor=excluded.cor, observacao=excluded.observacao""",
-            (codigo, modelo, marca, cor, int(tam), int(qtd), obs))
+              modelo=excluded.modelo, marca=excluded.marca, cor=excluded.cor, observacao=excluded.observacao,
+              preco=excluded.preco, preco_promo=excluded.preco_promo""",
+            (codigo, modelo, marca, cor, int(tam), int(qtd), obs, preco, promo))
         con.commit()
-    for r in con.execute("SELECT codigo, modelo, marca, cor, tamanho_br, quantidade, observacao FROM calcados ORDER BY codigo, tamanho_br"):
+    for r in con.execute("SELECT codigo, modelo, marca, cor, tamanho_br, quantidade, preco, preco_promo, observacao FROM calcados ORDER BY codigo, tamanho_br"):
         print(r)
 
 main()
