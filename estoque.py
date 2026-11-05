@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Estoque de calçados (SQLite). Uso:
   python3 estoque.py add CODIGO "modelo" "marca" "cor" TAMANHO QTD ["obs"]
+  python3 estoque.py foto CODIGO calcado|folha fotos/arquivo.jpg
   python3 estoque.py list
 """
 import sqlite3, sys
@@ -19,6 +20,13 @@ def conectar():
         quantidade INTEGER NOT NULL,
         observacao TEXT,
         UNIQUE (codigo, tamanho_br)
+    )""")
+    con.execute("""CREATE TABLE IF NOT EXISTS fotos (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        codigo TEXT NOT NULL,
+        tipo TEXT NOT NULL,
+        arquivo TEXT NOT NULL,
+        UNIQUE (codigo, tipo)
     )""")
     cols = [r[1] for r in con.execute("PRAGMA table_info(calcados)")]
     for c in ("preco", "preco_promo"):
@@ -40,6 +48,11 @@ def main():
               modelo=excluded.modelo, marca=excluded.marca, cor=excluded.cor, observacao=excluded.observacao,
               preco=excluded.preco, preco_promo=excluded.preco_promo""",
             (codigo, modelo, marca, cor, int(tam), int(qtd), obs, preco, promo))
+        con.commit()
+    if cmd == "foto":  # foto CODIGO TIPO(calcado|folha) ARQUIVO
+        codigo, tipo, arquivo = sys.argv[2:5]
+        con.execute("""INSERT INTO fotos (codigo, tipo, arquivo) VALUES (?,?,?)
+            ON CONFLICT(codigo, tipo) DO UPDATE SET arquivo=excluded.arquivo""", (codigo, tipo, arquivo))
         con.commit()
     for r in con.execute("SELECT codigo, modelo, marca, cor, tamanho_br, quantidade, preco, preco_promo, observacao FROM calcados ORDER BY codigo, tamanho_br"):
         print(r)
